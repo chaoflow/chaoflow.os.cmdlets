@@ -1,0 +1,7 @@
+/.installed.cfg
+/bin
+/build
+/develop-eggs
+/dist
+/parts
+setup.py.old
