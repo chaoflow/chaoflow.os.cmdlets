@@ -1,3 +1,7 @@
+XXX: This is still a mess, have a look at cmd.py and git.py
+
+
+
 Introduction
 ============
 
