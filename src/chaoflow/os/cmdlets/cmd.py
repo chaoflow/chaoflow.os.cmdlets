@@ -150,6 +150,11 @@ class Cmdlet(object):
         self._childs = {}
 
 
+    def _get_cmdslice(self):
+        """tested with _set_cmdclice below
+        """
+        return self.__cmdslice__
+
     def _set_cmdslice(self, value):
         """
         A list is directly used, it is the same list you gave, i.e. you can
@@ -157,31 +162,47 @@ class Cmdlet(object):
 
             >>> cmd = Cmdlet()
             >>> slice = ['list']
-            >>> cmd._cmdslice = slice
-            >>> cmd._cmdslice is slice
+            >>> cmd._set_cmdslice(slice)
+            >>> cmd._get_cmdslice() is slice
             True
 
         A string (str/unicode) is translated into a one-element list:
 
-            >>> cmd._cmdslice = 'str'
-            >>> cmd._cmdslice
+            >>> cmd._set_cmdslice('str')
+            >>> cmd._get_cmdslice()
             ['str']
 
-            >>> cmd._cmdslice = u'unicode'
-            >>> cmd._cmdslice
+            >>> cmd._set_cmdslice(u'unicode')
+            >>> cmd._get_cmdslice()
             [u'unicode']
 
         Everything else is translated into a list with list(value):
 
-            >>> cmd._cmdslice = ('tuple',)
-            >>> cmd._cmdslice
+            >>> cmd._set_cmdslice(('tuple',))
+            >>> cmd._get_cmdslice()
             ['tuple']
 
         Setting cmdslice to None clears it:
 
-            >>> cmd._cmdslice = None
-            >>> cmd._cmdslice
+            >>> cmd._set_cmdslice(None)
+            >>> cmd._get_cmdslice()
             []
+
+        Getter and setter may be overridden in inheriting classes:
+
+            >>> class MyCmd(Cmdlet):
+            ...     def _set_cmdslice(self, value):
+            ...         self.__cmdslice__ = 42
+            >>> mycmd = MyCmd()
+            >>> mycmd._cmdslice = 8
+            >>> mycmd._cmdslice
+            42
+            >>> class MyCmd2(MyCmd):
+            ...     def _get_cmdslice(self):
+            ...         return 17
+            >>> mycmd2 = MyCmd2()
+            >>> mycmd2._cmdslice
+            17
         """
         if value is None:
             value = []
@@ -192,8 +213,8 @@ class Cmdlet(object):
         self.__cmdslice__ = value
 
     _cmdslice = property(
-            lambda x: x.__cmdslice__,
-            _set_cmdslice,
+            lambda x: x._get_cmdslice(),
+            lambda x,y: x._set_cmdslice(y),
             )
 
 
@@ -203,24 +224,33 @@ class Cmdlet(object):
         The cmdline is given as a list of cmline elements:
 
             >>> cmd = Cmdlet('cmd')
-            >>> cmd._cmdline
+            >>> cmd._get_cmdline()
             ['cmd']
 
         A cmd uses its parent to form the cmdline.
 
             >>> subcmd = Cmdlet('subcmd',parent=cmd)
-            >>> subcmd._cmdline
+            >>> subcmd._get_cmdline()
             ['cmd', 'subcmd']
 
             >>> subsubcmd = Cmdlet('subsubcmd',parent=subcmd)
-            >>> subsubcmd._cmdline
+            >>> subsubcmd._get_cmdline()
             ['cmd', 'subcmd', 'subsubcmd']
 
         Empty elements are filtered out:
 
             >>> subcmd._cmdslice = ''
-            >>> subsubcmd._cmdline
+            >>> subsubcmd._get_cmdline()
             ['cmd', 'subsubcmd']
+
+        Getter may be overridden in inheriting classes:
+
+            >>> class MyCmd(Cmdlet):
+            ...     def _get_cmdline(self):
+            ...         return 17
+            >>> mycmd = MyCmd()
+            >>> mycmd._cmdline
+            17
         """
         try:
             cmdline = self.__parent__._cmdline + self._cmdslice
@@ -228,7 +258,9 @@ class Cmdlet(object):
             cmdline = self._cmdslice
         return filter(None, cmdline)
 
-    _cmdline = property(_get_cmdline)
+    _cmdline = property(
+            lambda x: x._get_cmdline(),
+            )
 
 
     def _get_workdir(self):
@@ -268,6 +300,22 @@ class Cmdlet(object):
         btw: debugging properties is not working cause all exceptions will
         result in an AttributeError, which has a certain sense to it. However,
         for debugging it would be nice to get the real exception.
+
+        Getter and setter may be overridden in inheriting classes:
+
+            >>> class MyCmd(Cmdlet):
+            ...     def _set_workdir(self, value):
+            ...         self.__workdir__ = '42'
+            >>> mycmd = MyCmd()
+            >>> mycmd._workdir = '8'
+            >>> mycmd._workdir
+            '42'
+            >>> class MyCmd2(MyCmd):
+            ...     def _get_workdir(self):
+            ...         return '17'
+            >>> mycmd2 = MyCmd2()
+            >>> mycmd2._workdir
+            '17'
         """
         if self.__workdir__ is None:
             if self.__parent__ is None:
@@ -285,7 +333,10 @@ class Cmdlet(object):
     def _set_workdir(self, value):
         self.__workdir__ = value
 
-    _workdir = property(_get_workdir, _set_workdir)
+    _workdir = property(
+            lambda x: x._get_workdir(),
+            lambda x,y: x._set_workdir(y),
+            )
 
 
     def __call__(self, *args, **kws):
