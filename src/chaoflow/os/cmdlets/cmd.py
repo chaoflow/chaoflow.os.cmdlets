@@ -342,7 +342,8 @@ class Cmdlet(object):
     def __call__(self, *args, **kws):
         """ WIP, needs format and workdir
         """
-        res = _exec(*(self._cmdline+list(args)))
+        cwd = kws.pop('workdir', None)
+        res = _exec(*(self._cmdline+list(args)),cwd=cwd)
         self._res = res
         return [x.rstrip() for x in res['stdout'].readlines()]
 
