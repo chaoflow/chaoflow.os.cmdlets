@@ -24,13 +24,13 @@ cmdlines easy, pain- and noise-free.
     XXX: why readonly, why a name at all?!
 
         >>> cmdlet1 = Cmdlet('cmd')
-        >>> cmdlet1._name
+        >>> cmdlet1.__name__
         'cmd'
         >>> cmdlet1._cmdslice
         ['cmd']
         >>> cmdlet1._cmdline
         ['cmd']
-        >>> cmdlet1._parent is None
+        >>> cmdlet1.__parent__ is None
         True
 
     All real attributes are prefixed with an underscore. Without underscore is

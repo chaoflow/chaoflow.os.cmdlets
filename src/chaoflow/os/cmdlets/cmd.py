@@ -87,9 +87,6 @@ class Cmdlet(object):
 
     # public, _ is needed to distinguish from subcmdlets
     # further properties are defined below
-    _name = property(lambda x: x.__name__)
-    _parent = property(lambda x: x.__parent__)
- 
 
     def __init__(self, name=None, parent=None, cmdslice=None):
         """
@@ -97,7 +94,7 @@ class Cmdlet(object):
         XXX: is that good for Popen?
 
             >>> cmd = Cmdlet()
-            >>> cmd._name == cmd._parent == None
+            >>> cmd.__name__ == cmd.__parent__ == None
             True
             >>> cmd._cmdline
             []
@@ -117,9 +114,9 @@ class Cmdlet(object):
             >>> name = 'name'
             >>> parent = 'parent'
             >>> cmd = Cmdlet(name=name,parent=parent)
-            >>> cmd._name == cmd.__name__ == 'name'
+            >>> cmd.__name__ == 'name'
             True
-            >>> cmd._parent == cmd.__parent__ == 'parent'
+            >>> cmd.__parent__ == 'parent'
             True
 
         A cmdslice may be set independent of name
