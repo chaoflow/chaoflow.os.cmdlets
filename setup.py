@@ -6,7 +6,8 @@ version = '0.1'
 
 setup(name=name,
       version=version,
-      description='Easy, pain- and noise-free execution of cmdlines',
+      description=\
+        'Easy, pain- and noise-free creation and execution of command lines',
       long_description=open("README.txt").read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
@@ -21,7 +22,7 @@ setup(name=name,
       keywords='',
       author='Florian Friesdorf',
       author_email='flo@chaoflow.net',
-      url='http://github.com/chaoflow/chaoflow.git.porcelain',
+      url='http://github.com/chaoflow/chaoflow.os.cmdlets',
       license='LGPL',
       packages = find_packages('src'),
       package_dir = {'': 'src'},
