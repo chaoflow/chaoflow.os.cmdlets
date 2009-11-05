@@ -1,3 +1,4 @@
+import os
 import subprocess
 from cStringIO import StringIO
 
@@ -79,16 +80,16 @@ class Cmdlet(object):
         IRawCmdlet(cmdlet).<attr> = <value>. But its kind of unnecessary. Maybe
         not...
     """
+    # __<name>__ is private stuff
+    # _<name is public stuff
+    # <name> is used to access subcmdlets
 
-    # internal
     __cmdslice__ = []
     __name__ = None
     __parent__ = None
+    __workdir__ = None
 
-    # public, _ is needed to distinguish from subcmdlets
-    # further properties are defined below
-
-    def __init__(self, name=None, parent=None, cmdslice=None):
+    def __init__(self, name=None, parent=None, cmdslice=None, workdir=None):
         """
         An empty cmdlet is valid and generates an empty cmdline:
         XXX: is that good for Popen?
@@ -105,19 +106,24 @@ class Cmdlet(object):
             >>> cmdslice = ['some', 'cmd']
             >>> class SomeCmd(Cmdlet):
             ...     __cmdslice__ = cmdslice
+            ...     __workdir__ = 'workdir'
             >>> s = SomeCmd()
             >>> s.__cmdslice__ is cmdslice
             True
+            >>> s.__workdir__
+            'workdir'
 
         Set values during __init__:
 
             >>> name = 'name'
             >>> parent = 'parent'
-            >>> cmd = Cmdlet(name=name,parent=parent)
+            >>> cmd = Cmdlet(name=name,parent=parent,workdir='otherworkdir')
             >>> cmd.__name__ == 'name'
             True
             >>> cmd.__parent__ == 'parent'
             True
+            >>> cmd.__workdir__
+            'otherworkdir'
 
         A cmdslice may be set independent of name
 
@@ -139,6 +145,8 @@ class Cmdlet(object):
             self._cmdslice = cmdslice
         if parent is not None:
             self.__parent__ = parent
+        if workdir is not None:
+            self.__workdir__ = workdir
         self._childs = {}
 
 
@@ -189,8 +197,7 @@ class Cmdlet(object):
             )
 
 
-    @property
-    def _cmdline(self):
+    def _get_cmdline(self):
         """Return the cmdline that would be executed by cmd()
 
         The cmdline is given as a list of cmline elements:
@@ -220,6 +227,65 @@ class Cmdlet(object):
         except AttributeError:
             cmdline = self._cmdslice
         return filter(None, cmdline)
+
+    _cmdline = property(_get_cmdline)
+
+
+    def _get_workdir(self):
+        """
+        A command has workdir or derives from parent, the workdir may be
+        relative (starting with ``./``) to the current workdir or absolut
+        (starting with ``/``):
+
+            >>> cmd = Cmdlet(workdir='./a/b')
+            >>> cmd._get_workdir()
+            './a/b'
+            >>> cmd.subcmd._get_workdir()
+            './a/b'
+
+        The stupid ``./``-notation is used to enable building paths with
+        cmdlets - not sure whether its a good idea, need to try for a while:
+
+            >>> gitbay = Cmdlet(workdir='~/.gitbay')
+            >>> gitbay.repo1._set_workdir('repo1')
+            >>> gitbay.repo1._get_workdir()
+            '~/.gitbay/repo1'
+
+            >>> gitbay.repo1._set_workdir('./repo1')
+            >>> gitbay.repo1._get_workdir()
+            './repo1'
+
+            >>> gitbay.repo1._set_workdir('/repo1')
+            >>> gitbay.repo1._get_workdir()
+            '/repo1'
+
+            >>> gitbay.repo1._set_workdir(None)
+            >>> gitbay.repo1._get_workdir()
+            '~/.gitbay'
+
+        btw: despite this example: we use os.path.join/os.sep and so should you
+
+        btw: debugging properties is not working cause all exceptions will
+        result in an AttributeError, which has a certain sense to it. However,
+        for debugging it would be nice to get the real exception.
+        """
+        if self.__workdir__ is None:
+            if self.__parent__ is None:
+                return ''
+            return self.__parent__._workdir
+
+        if self.__workdir__[0] == os.sep or self.__workdir__[:2] == '.'+os.sep:
+            return self.__workdir__
+
+        if self.__parent__ is None:
+            return self.__workdir__
+
+        return os.path.join(self.__parent__._workdir, self.__workdir__)
+
+    def _set_workdir(self, value):
+        self.__workdir__ = value
+
+    _workdir = property(_get_workdir, _set_workdir)
 
 
     def __call__(self, *args, **kws):
@@ -284,11 +350,41 @@ class Cmdlet(object):
             >>> cmd.subcmd = 'subcmd'
             >>> cmd.subcmd._cmdline
             ['subcmd']
+
+            >>> cmd.subcmd = dict(workdir='workdir',cmdslice='cmdslice')
+            >>> cmd.subcmd.__workdir__
+            'workdir'
+            >>> cmd.subcmd._cmdline
+            ['cmdslice']
+
+            >>> cmd.subcmd = dict(foo=1,bar=2)
+            Traceback (most recent call last):
+            ...
+            KeyError: ...
         """
         # Tested in __getattr__ doctest
         if name[0] == '_':
             object.__setattr__(self, name, value)
             return
 
+        # get the child cmdlet
         child = getattr(self, name)
-        child._cmdslice = value
+
+        # analyze what we've got
+        if type(value) is not dict:
+            value = dict(cmdslice=value)
+        else:
+            value = dict(value)
+
+        try:
+            child.__workdir__ = value.pop('workdir')
+        except KeyError:
+            pass
+        try:
+            child._cmdslice = value.pop('cmdslice')
+        except KeyError:
+            pass
+
+        if value:
+            raise KeyError("Got unknown key(s): %s" % (', '.join(\
+                    ["'%s'" % (x,) for x in value.keys()]),))
