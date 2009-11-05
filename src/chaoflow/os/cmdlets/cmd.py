@@ -1,11 +1,6 @@
-#!/usr/bin/env python
-
 import subprocess
 from cStringIO import StringIO
 
-
-class CmdError(Exception):
-    pass
 
 def _exec(*cmdline,**kws):
     r"""Run cmdline, cmdline is passed on to subprocess.Popen
@@ -85,10 +80,13 @@ class Cmdlet(object):
         not...
     """
 
+    # internal
     __cmdslice__ = []
     __name__ = None
     __parent__ = None
 
+    # public, _ is needed to distinguish from subcmdlets
+    # further properties are defined below
     _name = property(lambda x: x.__name__)
     _parent = property(lambda x: x.__parent__)
  
